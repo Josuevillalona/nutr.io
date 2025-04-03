@@ -50,18 +50,18 @@ export default function FileUpload() {
 
     const renderResult = () => (
         <div className="mt-6 space-y-4">
-            <h3 className="text-lg font-semibold">Analysis Results</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Analysis Results</h3>
             <div className="p-4 bg-gray-50 rounded-md space-y-4">
                 {result.pageCount > 1 && (
                     <div>
-                        <span className="font-medium">Pages Analyzed: </span>
+                        <span className="font-medium text-gray-900">Pages Analyzed: </span>
                         {result.pageCount}
                     </div>
                 )}
                 <div>
-                    <span className="font-medium">Analysis:</span>
+                    <span className="font-medium text-gray-900">Analysis:</span>
                     <div className="mt-2 prose prose-sm max-w-none">
-                        <pre className="whitespace-pre-wrap text-sm bg-white p-3 rounded border overflow-auto max-h-96">
+                        <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-white p-3 rounded border overflow-auto max-h-96">
                             {result.analysis}
                         </pre>
                     </div>
@@ -74,7 +74,7 @@ export default function FileUpload() {
         <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium mb-2" htmlFor="file">
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="file">
                         Upload Lab Report (PDF, JPG, or PNG)
                     </label>
                     <input
