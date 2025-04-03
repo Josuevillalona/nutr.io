@@ -111,7 +111,7 @@ export async function POST(request) {
             const openai = getOpenAIClient();
 
             // Define analysis prompt
-            const analysisPromptText = `provide a brief summary and list up to 5 deficiencies identified in the results`;
+            const analysisPromptText = `Based on the following lab report text, provide a brief summary, list up to 5 deficiencies identified in the results, and for each deficiency listed, suggest 3-5 common food types that are generally high in the corresponding nutrient.`;
             const fullPrompt = `${analysisPromptText} for the following lab report text:\n\n${document.text}`;
 
             // Construct OpenAI request
