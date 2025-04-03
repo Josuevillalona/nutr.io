@@ -28,6 +28,7 @@ export default function FileUpload() {
             const formData = new FormData();
             formData.append('file', file);
 
+            console.log('Uploading file:', file.name, 'Type:', file.type);
             const response = await axios.post('/api/upload', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
@@ -35,24 +36,86 @@ export default function FileUpload() {
             });
 
             if (response.data.success) {
-                setResult(response.data.data);
+                // Handle both PDF and image responses
+                setResult(
+                    file.type === 'application/pdf'
+                        ? response.data
+                        : response.data.data
+                );
             } else {
                 throw new Error(response.data.error || 'Failed to process file');
             }
         } catch (err) {
-            setError(err.message || 'An error occurred while processing the file');
             console.error('Upload failed:', err);
+            setError(err.response?.data?.details || err.message || 'An error occurred while processing the file');
         } finally {
             setIsLoading(false);
         }
     };
 
+    const renderPdfResult = () => (
+        <div className="mt-6 space-y-4">
+            <h3 className="text-lg font-semibold">Results</h3>
+            <div className="p-4 bg-gray-50 rounded-md space-y-4">
+                <div>
+                    <span className="font-medium">Total Pages: </span>
+                    {result.totalPages}
+                </div>
+                <div>
+                    <span className="font-medium">Extracted Text:</span>
+                    <pre className="mt-2 whitespace-pre-wrap text-sm bg-white p-3 rounded border overflow-auto max-h-96">
+                        {result.combinedText}
+                    </pre>
+                </div>
+                {result.pages?.map((page, i) => (
+                    <div key={i} className="border-t pt-4 mt-4 first:border-t-0 first:pt-0 first:mt-0">
+                        <div className="font-medium mb-2">Page {page.pageNumber}</div>
+                        {page.confidence && (
+                            <div className="text-sm text-gray-600 mb-2">
+                                Confidence: {(page.confidence * 100).toFixed(2)}%
+                            </div>
+                        )}
+                        <pre className="whitespace-pre-wrap text-sm bg-white p-3 rounded border overflow-auto max-h-48">
+                            {page.text}
+                        </pre>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    const renderImageResult = () => (
+        <div className="mt-6 space-y-4">
+            <h3 className="text-lg font-semibold">Results</h3>
+            <div className="p-4 bg-gray-50 rounded-md space-y-4">
+                {result.confidence && (
+                    <div>
+                        <span className="font-medium">Confidence Score: </span>
+                        {(result.confidence * 100).toFixed(2)}%
+                    </div>
+                )}
+                <div>
+                    <span className="font-medium">Extracted Text:</span>
+                    <pre className="mt-2 whitespace-pre-wrap text-sm bg-white p-3 rounded border overflow-auto max-h-96">
+                        {result.text}
+                    </pre>
+                </div>
+                {result.pages && result.pages.length > 0 && (
+                    <div>
+                        <span className="font-medium">Pages: </span>
+                        {result.pages.length}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
     return (
-        <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
+        <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium mb-2" htmlFor="file">
-                        Upload Lab Report
+                        Upload Lab Report (PDF, JPG, or PNG)
                     </label>
                     <input
                         type="file"
@@ -77,21 +140,7 @@ export default function FileUpload() {
                 )}
 
                 {result && (
-                    <div className="mt-6 space-y-4">
-                        <h3 className="text-lg font-semibold">Results</h3>
-                        <div className="p-4 bg-gray-50 rounded-md">
-                            <div className="mb-2">
-                                <span className="font-medium">Confidence Score: </span>
-                                {(result.confidence * 100).toFixed(2)}%
-                            </div>
-                            <div>
-                                <span className="font-medium">Extracted Text:</span>
-                                <pre className="mt-2 whitespace-pre-wrap text-sm bg-white p-3 rounded border">
-                                    {result.text}
-                                </pre>
-                            </div>
-                        </div>
-                    </div>
+                    file?.type === 'application/pdf' ? renderPdfResult() : renderImageResult()
                 )}
             </form>
         </div>
