@@ -45,6 +45,20 @@ const validateResult = (result) => {
     }
 };
 
+// Helper function to clean up GCS files
+const cleanupGcsFiles = async (bucket, inputPath, outputFiles) => {
+    try {
+        await Promise.all([
+            bucket.file(inputPath).delete(),
+            ...outputFiles.map(file => file.delete())
+        ]);
+        console.log('Cleaned up GCS files successfully');
+    } catch (error) {
+        console.error('Error cleaning up GCS files:', error);
+        // Don't throw - we don't want cleanup errors to affect the response
+    }
+};
+
 export async function POST(request) {
     try {
         const formData = await request.formData();
@@ -92,12 +106,14 @@ export async function POST(request) {
                 const storage = getStorageClient();
                 const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
 
-                // Generate unique filename and paths
-                const uniqueFilename = `${uuidv4()}.pdf`;
-                const gcsFilePath = uniqueFilename;
-                const gcsOutputPrefix = 'ocr-results/';
+                // Generate unique ID and paths
+                const uniqueId = uuidv4();
+                const gcsFilePath = `uploads/${uniqueId}.pdf`;
+                const gcsOutputPrefix = `ocr-results/${uniqueId}/`;
 
                 console.log('Uploading PDF to GCS...');
+                console.log('Input path:', gcsFilePath);
+                console.log('Output prefix:', gcsOutputPrefix);
 
                 // Upload PDF to GCS
                 try {
@@ -145,23 +161,8 @@ export async function POST(request) {
                     throw new Error('Invalid operation result format');
                 }
 
-                // Extract output URI from operation result
-                const outputUri = filesResponse.responses[0]?.outputConfig?.gcsDestination?.uri;
-                if (!outputUri) {
-                    throw new Error('No output URI found in operation result');
-                }
-
-                // Parse GCS URI to get bucket and prefix
-                const gcsUriMatch = outputUri.match(/gs:\/\/([^/]+)\/(.+)/);
-                if (!gcsUriMatch) {
-                    throw new Error('Invalid GCS URI format');
-                }
-
-                const [, bucketName, prefix] = gcsUriMatch;
-                console.log('Retrieving results from GCS...');
-
                 // Get JSON files from the output location
-                const [files] = await bucket.getFiles({ prefix });
+                const [files] = await bucket.getFiles({ prefix: gcsOutputPrefix });
                 const jsonFiles = files.filter(file => file.name.endsWith('.json'));
 
                 if (jsonFiles.length === 0) {
@@ -195,6 +196,9 @@ export async function POST(request) {
 
                 // Sort by page number
                 processedResults.sort((a, b) => a.pageNumber - b.pageNumber);
+
+                // Clean up GCS files in the background
+                cleanupGcsFiles(bucket, gcsFilePath, jsonFiles);
 
                 return NextResponse.json({
                     success: true,

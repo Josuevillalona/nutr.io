@@ -67,19 +67,6 @@ export default function FileUpload() {
                         {result.combinedText}
                     </pre>
                 </div>
-                {result.pages?.map((page, i) => (
-                    <div key={i} className="border-t pt-4 mt-4 first:border-t-0 first:pt-0 first:mt-0">
-                        <div className="font-medium mb-2">Page {page.pageNumber}</div>
-                        {page.confidence && (
-                            <div className="text-sm text-gray-600 mb-2">
-                                Confidence: {(page.confidence * 100).toFixed(2)}%
-                            </div>
-                        )}
-                        <pre className="whitespace-pre-wrap text-sm bg-white p-3 rounded border overflow-auto max-h-48">
-                            {page.text}
-                        </pre>
-                    </div>
-                ))}
             </div>
         </div>
     );
@@ -88,12 +75,6 @@ export default function FileUpload() {
         <div className="mt-6 space-y-4">
             <h3 className="text-lg font-semibold">Results</h3>
             <div className="p-4 bg-gray-50 rounded-md space-y-4">
-                {result.confidence && (
-                    <div>
-                        <span className="font-medium">Confidence Score: </span>
-                        {(result.confidence * 100).toFixed(2)}%
-                    </div>
-                )}
                 <div>
                     <span className="font-medium">Extracted Text:</span>
                     <pre className="mt-2 whitespace-pre-wrap text-sm bg-white p-3 rounded border overflow-auto max-h-96">
