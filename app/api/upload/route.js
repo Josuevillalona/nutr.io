@@ -110,11 +110,29 @@ export async function POST(request) {
             // Initialize OpenAI client
             const openai = getOpenAIClient();
 
-            // Return success response with extracted text
+            // Define analysis prompt
+            const analysisPromptText = `provide a brief summary and list up to 5 deficiencies identified in the results`;
+            const fullPrompt = `${analysisPromptText} for the following lab report text:\n\n${document.text}`;
+
+            // Construct OpenAI request
+            const openAIRequestPayload = {
+                model: "gpt-4o",
+                messages: [{ role: "user", content: fullPrompt }]
+            };
+
+            // Log OpenAI request
+            console.log('Sending request to OpenAI for analysis...');
+
+            // Make OpenAI API call
+            const openAIResponse = await openai.chat.completions.create(openAIRequestPayload);
+            const analysisResult = openAIResponse.choices[0]?.message?.content?.trim() ?? 'No analysis result received.';
+
+            console.log('Received analysis from OpenAI.');
+
+            // Return final analysis
             return NextResponse.json({
                 success: true,
-                message: "Document AI processing successful.",
-                extractedText: document.text ?? "No text extracted."
+                analysis: analysisResult
             });
 
         } catch (processingError) {
