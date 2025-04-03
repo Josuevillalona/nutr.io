@@ -9,12 +9,17 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google-cloud/documentai": "^9.1.0",
     "@google-cloud/storage": "^7.16.0",
     "@google-cloud/vision": "^5.1.0",
     "axios": "^1.8.4",
     "next": "15.2.4",
+    "openai": "^4.91.1",
+    "pdf-parse": "^1.1.1",
+    "pdf2pic": "^3.1.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "sharp": "^0.33.5",
     "tesseract.js": "^6.0.0",
     "uuid": "^11.1.0"
   },

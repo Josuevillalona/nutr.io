@@ -1,62 +1,15 @@
-import { ImageAnnotatorClient } from '@google-cloud/vision';
-import { Storage } from '@google-cloud/storage';
-import { v4 as uuidv4 } from 'uuid';
+import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
+import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300; // Increased to 5 minutes for PDF processing
+export const maxDuration = 300; // 5 minutes for processing
 
-// Helper function to initialize Vision client
-const getVisionClient = () => {
-    const credentials = {
-        type: 'service_account',
-        project_id: process.env.GOOGLE_PROJECT_ID,
-        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        client_email: process.env.GOOGLE_CLIENT_EMAIL
-    };
-
-    return new ImageAnnotatorClient({
-        credentials,
-        projectId: process.env.GOOGLE_PROJECT_ID
+// Helper function to initialize OpenAI client
+const getOpenAIClient = () => {
+    return new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
     });
-};
-
-// Helper function to initialize Storage client
-const getStorageClient = () => {
-    const credentials = {
-        project_id: process.env.GOOGLE_PROJECT_ID,
-        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        client_email: process.env.GOOGLE_CLIENT_EMAIL
-    };
-
-    return new Storage({
-        credentials,
-        projectId: process.env.GOOGLE_PROJECT_ID
-    });
-};
-
-// Helper function to validate result structure
-const validateResult = (result) => {
-    if (!result.responses?.length) {
-        throw new Error('Invalid result format: missing responses array');
-    }
-    if (!result.responses[0]?.fullTextAnnotation) {
-        throw new Error('Invalid result format: missing text annotation');
-    }
-};
-
-// Helper function to clean up GCS files
-const cleanupGcsFiles = async (bucket, inputPath, outputFiles) => {
-    try {
-        await Promise.all([
-            bucket.file(inputPath).delete(),
-            ...outputFiles.map(file => file.delete())
-        ]);
-        console.log('Cleaned up GCS files successfully');
-    } catch (error) {
-        console.error('Error cleaning up GCS files:', error);
-        // Don't throw - we don't want cleanup errors to affect the response
-    }
 };
 
 export async function POST(request) {
@@ -91,175 +44,86 @@ export async function POST(request) {
             );
         }
 
-        // Convert file to buffer
-        const buffer = await file.arrayBuffer();
-        const uint8Array = new Uint8Array(buffer);
-
         try {
-            // Initialize Vision client
-            const vision = getVisionClient();
+            // Convert file to buffer
+            const buffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(buffer);
 
-            if (file.type === 'application/pdf') {
-                console.log('Processing PDF file using GCS and asyncBatchAnnotateFiles...');
+            // Initialize Document AI client
+            const documentAiClient = new DocumentProcessorServiceClient({
+                apiEndpoint: `${process.env.DOCUMENT_AI_LOCATION}-documentai.googleapis.com`
+            });
 
-                // Initialize Storage client and get bucket
-                const storage = getStorageClient();
-                const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
+            // Get processor path from environment variable
+            const processorPath = process.env.DOCUMENT_AI_PROCESSOR_ID;
 
-                // Generate unique ID and paths
-                const uniqueId = uuidv4();
-                const gcsFilePath = `uploads/${uniqueId}.pdf`;
-                const gcsOutputPrefix = `ocr-results/${uniqueId}/`;
+            console.log('Document AI client initialized. Processor path:', processorPath);
 
-                console.log('Uploading PDF to GCS...');
-                console.log('Input path:', gcsFilePath);
-                console.log('Output prefix:', gcsOutputPrefix);
+            // Base64 encode the file buffer
+            const encodedBase64String = Buffer.from(uint8Array).toString('base64');
 
-                // Upload PDF to GCS
-                try {
-                    await bucket.file(gcsFilePath).save(uint8Array, {
-                        contentType: 'application/pdf'
-                    });
-                    console.log('PDF uploaded successfully to GCS');
-                } catch (uploadError) {
-                    console.error('GCS Upload Error:', {
-                        message: uploadError.message,
-                        details: uploadError.details
-                    });
-                    throw new Error(`Failed to upload PDF to GCS: ${uploadError.message}`);
+            // Construct Document AI request
+            const docAiRequest = {
+                name: processorPath,
+                rawDocument: {
+                    content: encodedBase64String,
+                    mimeType: file.type
                 }
+            };
 
-                // Configure Vision API request for PDF processing
-                const request = {
-                    requests: [{
-                        inputConfig: {
-                            gcsSource: {
-                                uri: `gs://${process.env.GCS_BUCKET_NAME}/${gcsFilePath}`
-                            },
-                            mimeType: 'application/pdf'
-                        },
-                        features: [{
-                            type: 'DOCUMENT_TEXT_DETECTION'
-                        }],
-                        outputConfig: {
-                            gcsDestination: {
-                                uri: `gs://${process.env.GCS_BUCKET_NAME}/${gcsOutputPrefix}`
-                            }
-                        }
-                    }]
-                };
+            console.log('Document AI request prepared');
 
-                // Call Vision API with GCS paths and wait for completion
-                const [operation] = await vision.asyncBatchAnnotateFiles(request);
-                console.log('Vision API operation initiated:', operation.name);
+            // Add detailed debugging logs
+            console.log('--- Debugging Document AI Call ---');
+            console.log('Using Endpoint Target:', `${process.env.DOCUMENT_AI_LOCATION}-documentai.googleapis.com`);
+            console.log('Using Processor Path:', processorPath);
+            console.log('Request Object Name:', docAiRequest.name);
+            console.log('Request Mime Type:', docAiRequest.rawDocument.mimeType);
+            console.log('Request Base64 Snippet:', docAiRequest.rawDocument.content.substring(0, 60) + '...');
+            console.log('------------------------------------');
 
-                console.log('Waiting for operation to complete...');
-                const [filesResponse] = await operation.promise();
-                console.log('Operation complete');
+            // Process document with Document AI
+            const [result] = await documentAiClient.processDocument(docAiRequest);
 
-                if (!filesResponse || !filesResponse.responses) {
-                    throw new Error('Invalid operation result format');
-                }
+            // Log the full raw result
+            console.log('Raw Document AI Result:', JSON.stringify(result, null, 2));
 
-                // Get JSON files from the output location
-                const [files] = await bucket.getFiles({ prefix: gcsOutputPrefix });
-                const jsonFiles = files.filter(file => file.name.endsWith('.json'));
+            // Extract and validate document
+            const { document } = result;
 
-                if (jsonFiles.length === 0) {
-                    throw new Error('No result files found in GCS');
-                }
-
-                // Download and process results
-                const results = await Promise.all(
-                    jsonFiles.map(async file => {
-                        const [content] = await file.download();
-                        return JSON.parse(content.toString());
-                    })
-                );
-
-                // Process results from all pages
-                const processedResults = results.map(result => {
-                    validateResult(result);
-
-                    // Safely extract text and metadata
-                    const firstResponse = result.responses[0];
-                    const text = firstResponse.fullTextAnnotation?.text ?? '';
-                    const confidence = firstResponse.fullTextAnnotation?.confidence ?? null;
-                    const pageNumber = firstResponse.context?.pageNumber ?? 1;
-
-                    return {
-                        text,
-                        confidence,
-                        pageNumber
-                    };
-                });
-
-                // Sort by page number
-                processedResults.sort((a, b) => a.pageNumber - b.pageNumber);
-
-                // Clean up GCS files in the background
-                cleanupGcsFiles(bucket, gcsFilePath, jsonFiles);
-
-                return NextResponse.json({
-                    success: true,
-                    pages: processedResults,
-                    totalPages: processedResults.length,
-                    combinedText: processedResults.map(r => r.text).join('\n')
-                });
-
-            } else {
-                console.log('Processing image file using annotateImage...');
-
-                // Convert image to base64
-                const base64Content = Buffer.from(uint8Array).toString('base64');
-
-                // Configure image-specific request
-                const request = {
-                    image: {
-                        content: base64Content
-                    },
-                    features: [{
-                        type: 'DOCUMENT_TEXT_DETECTION'
-                    }]
-                };
-
-                // Process image using annotateImage
-                const [result] = await vision.annotateImage(request);
-
-                if (!result) {
-                    throw new Error('No result from Vision API');
-                }
-
-                if (!result.fullTextAnnotation) {
-                    throw new Error('No text found in the document');
-                }
-
-                const { fullTextAnnotation } = result;
-
-                // Structure response
-                const response = {
-                    text: fullTextAnnotation.text,
-                    confidence: fullTextAnnotation.confidence ?? null,
-                    pages: [{
-                        text: fullTextAnnotation.text,
-                        confidence: fullTextAnnotation.confidence ?? null,
-                        pageNumber: 1
-                    }],
-                    totalPages: 1
-                };
-
-                return NextResponse.json({
-                    success: true,
-                    data: response
-                });
+            // Check for missing document
+            if (!document) {
+                console.error('Document object missing in Document AI response');
+                throw new Error('Document object missing in Document AI response');
             }
+
+            // Check for Document AI processing errors
+            if (document.error) {
+                console.error('Document AI reported an internal processing error:', JSON.stringify(document.error, null, 2));
+                throw new Error(`Document AI processing error: ${document.error.message || 'Unknown error'}`);
+            }
+
+            // Log document structure and text length
+            console.log('Document Object Keys:', Object.keys(document));
+            console.log('Extracted Text Length:', document.text?.length ?? 'N/A (text missing)');
+
+            // Initialize OpenAI client
+            const openai = getOpenAIClient();
+
+            // Return success response with extracted text
+            return NextResponse.json({
+                success: true,
+                message: "Document AI processing successful.",
+                extractedText: document.text ?? "No text extracted."
+            });
 
         } catch (processingError) {
             console.error('Document Processing Error:', {
                 name: processingError.name,
                 message: processingError.message,
                 code: processingError.code,
-                details: processingError.details
+                details: processingError.details,
+                stack: processingError.stack
             });
             return NextResponse.json(
                 {
@@ -276,7 +140,8 @@ export async function POST(request) {
             name: error.name,
             message: error.message,
             code: error.code,
-            details: error.details
+            details: error.details,
+            stack: error.stack
         });
         return NextResponse.json(
             {

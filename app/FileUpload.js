@@ -36,12 +36,7 @@ export default function FileUpload() {
             });
 
             if (response.data.success) {
-                // Handle both PDF and image responses
-                setResult(
-                    file.type === 'application/pdf'
-                        ? response.data
-                        : response.data.data
-                );
+                setResult(response.data);
             } else {
                 throw new Error(response.data.error || 'Failed to process file');
             }
@@ -53,40 +48,24 @@ export default function FileUpload() {
         }
     };
 
-    const renderPdfResult = () => (
+    const renderResult = () => (
         <div className="mt-6 space-y-4">
-            <h3 className="text-lg font-semibold">Results</h3>
+            <h3 className="text-lg font-semibold">Analysis Results</h3>
             <div className="p-4 bg-gray-50 rounded-md space-y-4">
-                <div>
-                    <span className="font-medium">Total Pages: </span>
-                    {result.totalPages}
-                </div>
-                <div>
-                    <span className="font-medium">Extracted Text:</span>
-                    <pre className="mt-2 whitespace-pre-wrap text-sm bg-white p-3 rounded border overflow-auto max-h-96">
-                        {result.combinedText}
-                    </pre>
-                </div>
-            </div>
-        </div>
-    );
-
-    const renderImageResult = () => (
-        <div className="mt-6 space-y-4">
-            <h3 className="text-lg font-semibold">Results</h3>
-            <div className="p-4 bg-gray-50 rounded-md space-y-4">
-                <div>
-                    <span className="font-medium">Extracted Text:</span>
-                    <pre className="mt-2 whitespace-pre-wrap text-sm bg-white p-3 rounded border overflow-auto max-h-96">
-                        {result.text}
-                    </pre>
-                </div>
-                {result.pages && result.pages.length > 0 && (
+                {result.pageCount > 1 && (
                     <div>
-                        <span className="font-medium">Pages: </span>
-                        {result.pages.length}
+                        <span className="font-medium">Pages Analyzed: </span>
+                        {result.pageCount}
                     </div>
                 )}
+                <div>
+                    <span className="font-medium">Analysis:</span>
+                    <div className="mt-2 prose prose-sm max-w-none">
+                        <pre className="whitespace-pre-wrap text-sm bg-white p-3 rounded border overflow-auto max-h-96">
+                            {result.analysis}
+                        </pre>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -120,9 +99,7 @@ export default function FileUpload() {
                     </div>
                 )}
 
-                {result && (
-                    file?.type === 'application/pdf' ? renderPdfResult() : renderImageResult()
-                )}
+                {result && renderResult()}
             </form>
         </div>
     );
