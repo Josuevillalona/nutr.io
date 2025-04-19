@@ -54,12 +54,12 @@ export default function FileUpload() {
             <div className="p-4 bg-gray-50 rounded-md space-y-4">
                 {result.pageCount > 1 && (
                     <div>
-                        <span className="font-medium text-gray-900">Pages Analyzed: </span>
+                        <span className="font-medium">Pages Analyzed: </span>
                         {result.pageCount}
                     </div>
                 )}
                 <div>
-                    <span className="font-medium text-gray-900">Analysis:</span>
+                    <span className="font-medium">Analysis:</span>
                     <div className="mt-2 prose prose-sm max-w-none">
                         <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-white p-3 rounded border overflow-auto max-h-96">
                             {result.analysis}
