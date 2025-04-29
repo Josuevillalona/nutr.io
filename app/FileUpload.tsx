@@ -72,7 +72,6 @@ export default function FileUpload() {
 
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        // ... (function content remains the same) ...
         const selectedFile = e.target.files ? e.target.files[0] : null;
         if (selectedFile) {
             const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -93,7 +92,6 @@ export default function FileUpload() {
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        // ... (function content remains the same) ...
         e.preventDefault();
         if (!file) { setError("Please select a file first."); return; };
         setIsLoading(true);
@@ -131,7 +129,6 @@ export default function FileUpload() {
 
     // Handlers for Grocery List (remain the same)
     const handleAddToGroceryList = useCallback((foodToAdd: FoodRecommendation) => {
-        // ... (function content remains the same) ...
         setGroceryList(prevList => {
             const exists = prevList.some(item => item.code === foodToAdd.code);
             if (!exists) { return [...prevList, foodToAdd]; }
@@ -140,14 +137,12 @@ export default function FileUpload() {
     }, []);
 
     const handleRemoveFromGroceryList = useCallback((foodCodeToRemove: string) => {
-        // ... (function content remains the same) ...
         setGroceryList(prevList => prevList.filter(item => item.code !== foodCodeToRemove));
     }, []);
 
 
     // Render recommendations card function (remains the same)
     const renderRecommendationsForDeficiency = (deficiencyName: string, recommendations: FoodRecommendation[]) => {
-        // ... (function content is identical to previous version) ...
         const recs = recommendations || [];
         const hadBackendError = backendErrors.some(err => err.includes(deficiencyName));
         if (recs.length === 0) { return (<p className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded-md"> {hadBackendError ? `Could not fetch recommendations for ${deficiencyName}.` : `No specific food recommendations found matching criteria for ${deficiencyName}.`} </p>); }
@@ -176,43 +171,76 @@ export default function FileUpload() {
     };
 
 
-    // Render Results function (no change needed here)
+    // --- UPDATED renderResult function with heading styles ---
     const renderResult = () => {
-        // ... (function content is identical to previous version) ...
         if (!result || !result.analysis) return null;
         const { analysis, recommendations } = result;
-        return (<div className="mt-8 space-y-8"> {analysis.summary && (<div className="p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-200"> <h2 className="text-xl font-semibold text-gray-800 mb-3">Analysis Summary</h2> <p className="text-gray-700 whitespace-pre-wrap">{analysis.summary}</p> </div>)} <div> <h2 className="text-2xl font-bold text-gray-900 mb-5">Identified Deficiencies & Recommendations</h2> {(analysis.deficiencies && analysis.deficiencies.length > 0) ? (<div className="space-y-8"> {analysis.deficiencies.map((deficiencyObj) => (<div key={deficiencyObj.nutrient} className="p-5 bg-white rounded-lg border border-gray-200 shadow-sm"> <h3 className="text-xl font-semibold text-gray-800 mb-1">{deficiencyObj.nutrient}</h3> {deficiencyObj.notes && <p className="text-sm text-gray-600 mb-4 italic">{deficiencyObj.notes}</p>} {renderRecommendationsForDeficiency(deficiencyObj.nutrient, recommendations?.[deficiencyObj.nutrient] || [])} </div>))} </div>) : (<p className="text-gray-600 italic p-4 bg-gray-50 rounded-md border">No specific deficiencies identified in the report.</p>)} </div> {backendErrors.length > 0 && (<div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg"> <h4 className="text-sm font-semibold text-yellow-800 mb-1">Recommendation Issues:</h4> <ul className="list-disc list-inside text-sm text-yellow-700"> {backendErrors.map((errMsg, index) => <li key={index}>{errMsg}</li>)} </ul> </div>)} <div className="mt-10 pt-6 border-t border-gray-200"> <h3 className="text-md font-semibold text-gray-700 mb-2">Disclaimer</h3> <p className="text-sm text-gray-500"> This tool provides AI-generated insights...[rest of disclaimer]... </p> </div> </div>);
+        return (
+            <div className="mt-8 space-y-8">
+                {/* Analysis Summary - Use lighter text if over video, but card style is likely better */}
+                {analysis.summary && (
+                    // Keeping card style for summary - usually better readability than text directly on video
+                    <div className="p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
+                        <h2 className="text-xl font-semibold text-gray-800 mb-3">Analysis Summary</h2>
+                        <p className="text-gray-700 whitespace-pre-wrap">{analysis.summary}</p>
+                    </div>
+                )}
+                {/* Deficiencies & Recommendations Section */}
+                <div>
+                    {/* --- UPDATED HEADING --- */}
+                    <h2 className="text-3xl font-bold text-white mb-6 tracking-tight [text-shadow:1px_1px_3px_rgba(0,0,0,0.7)]">
+                        Identified Deficiencies & Recommendations
+                    </h2>
+                    {(analysis.deficiencies && analysis.deficiencies.length > 0) ? (
+                        <div className="space-y-8">
+                            {analysis.deficiencies.map((deficiencyObj) => (
+                                // Container for each deficiency block - keeping card style
+                                <div key={deficiencyObj.nutrient} className="p-5 bg-white rounded-lg border border-gray-200 shadow-sm">
+                                    <h3 className="text-xl font-semibold text-gray-800 mb-1">{deficiencyObj.nutrient}</h3>
+                                    {deficiencyObj.notes && <p className="text-sm text-gray-600 mb-4 italic">{deficiencyObj.notes}</p>}
+                                    {renderRecommendationsForDeficiency(deficiencyObj.nutrient, recommendations?.[deficiencyObj.nutrient] || [])}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        // Use lighter text if needed over video, but card style is likely better
+                        <p className="text-gray-100 italic p-4 bg-black/30 rounded-md border border-gray-500">No specific deficiencies identified in the report.</p> // Example lighter text on subtle background
+                    )}
+                </div>
+                {/* Display Backend/Recommendation Issues - Card style is good */}
+                {backendErrors.length > 0 && (
+                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
+                        <h4 className="text-sm font-semibold text-yellow-800 mb-1">Recommendation Issues:</h4>
+                        <ul className="list-disc list-inside text-sm text-yellow-700">
+                            {backendErrors.map((errMsg, index) => <li key={index}>{errMsg}</li>)}
+                        </ul>
+                    </div>
+                )}
+                {/* Disclaimer - Card style or lighter text */}
+                <div className="mt-10 pt-6 border-t border-gray-500"> {/* Use darker border if needed */}
+                    <h3 className="text-md font-semibold text-gray-100 mb-2 [text-shadow:1px_1px_1px_rgba(0,0,0,0.5)]">Disclaimer</h3>
+                    <p className="text-sm text-gray-300 [text-shadow:1px_1px_1px_rgba(0,0,0,0.5)]">
+                        This tool provides AI-generated insights and food suggestions based on the uploaded lab report. It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition or nutritional needs. Never disregard professional medical advice or delay in seeking it because of something you have read from this application (LONA). Food data is sourced from Open Food Facts and may not be complete or entirely accurate.
+                    </p>
+                </div>
+            </div>
+        );
     };
 
-    // --- UPDATED: Render Grocery List with Links ---
+
+    // Render Grocery List function (remains the same)
     const renderGroceryList = () => {
         if (groceryList.length === 0) { return null; }
-
         return (
             <div className="mt-12 p-6 bg-purple-50 rounded-lg border border-purple-200 shadow-sm">
                 <h2 className="text-xl font-semibold text-purple-800 mb-4">My Grocery List ({groceryList.length})</h2>
                 <ul className="space-y-3">
                     {groceryList.map((item) => {
-                        // Construct the URL for the grocery list item
                         const productUrl = `https://world.openfoodfacts.org/product/${item.code}`;
                         return (
                             <li key={item.code} className="flex justify-between items-center p-3 bg-white rounded-md shadow-sm">
-                                {/* Wrap item name in a link */}
-                                <a
-                                    href={productUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm font-medium text-gray-700 hover:text-purple-700 hover:underline"
-                                >
-                                    {item.name}
-                                </a>
-                                <button
-                                    onClick={() => handleRemoveFromGroceryList(item.code)}
-                                    className="ml-4 px-2 py-1 text-xs font-medium text-red-600 bg-red-100 rounded hover:bg-red-200 transition-colors flex-shrink-0" // Added flex-shrink-0
-                                    aria-label={`Remove ${item.name} from list`}
-                                >
-                                    Remove
-                                </button>
+                                <a href={productUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-gray-700 hover:text-purple-700 hover:underline" > {item.name} </a>
+                                <button onClick={() => handleRemoveFromGroceryList(item.code)} className="ml-4 px-2 py-1 text-xs font-medium text-red-600 bg-red-100 rounded hover:bg-red-200 transition-colors flex-shrink-0" aria-label={`Remove ${item.name} from list`} > Remove </button>
                             </li>
                         );
                     })}
@@ -221,18 +249,42 @@ export default function FileUpload() {
         );
     };
 
-    // Main component return (no change needed here)
+
+    // Main component return
     return (
         <div className="py-8">
-            {/* ... Upload Form ... */}
-            <form onSubmit={handleSubmit} className="mb-8 p-6 bg-white rounded-lg shadow-md border border-gray-200"> <label htmlFor="file-upload" className="block text-lg font-semibold text-gray-700 mb-3"> Upload Lab Report </label> <div className="flex flex-col sm:flex-row items-center gap-4"> <input id="file-upload" type="file" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-purple-500 focus:outline-none focus:ring-purple-500 sm:text-sm file:mr-4 file:rounded-md file:border-0 file:bg-purple-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-purple-700 hover:file:bg-purple-100" /> <button type="submit" disabled={isLoading || !file} className="w-full sm:w-auto flex justify-center items-center px-6 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap" > {isLoading ? (<> <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing... </>) : 'Analyze Report'} </button> </div> {file && <p className="text-sm text-gray-600 mt-3">Selected: {file.name}</p>} </form>
-            {/* ... Loading State ... */}
-            {isLoading && (<div className="text-center py-10"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div><p className="mt-4 text-gray-600">Analyzing your report, this may take a minute...</p></div>)}
-            {/* ... Error Display ... */}
-            {error && (<div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg"><p className="font-bold">Error</p><p>{error}</p></div>)}
-            {/* ... Render results section ... */}
+            {/* Upload Form - Keeping card style is likely best for usability */}
+            <form onSubmit={handleSubmit} className="mb-8 p-6 bg-white rounded-lg shadow-md border border-gray-200">
+                <label htmlFor="file-upload" className="block text-lg font-semibold text-gray-700 mb-3"> Upload Lab Report </label>
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <input id="file-upload" type="file" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-purple-500 focus:outline-none focus:ring-purple-500 sm:text-sm file:mr-4 file:rounded-md file:border-0 file:bg-purple-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-purple-700 hover:file:bg-purple-100" />
+                    <button type="submit" disabled={isLoading || !file} className="w-full sm:w-auto flex justify-center items-center px-6 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap" > {isLoading ? (<> <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing... </>) : 'Analyze Report'} </button>
+                </div>
+                {file && <p className="text-sm text-gray-600 mt-3">Selected: {file.name}</p>} {/* Keep dark text if form is white */}
+            </form>
+
+            {/* --- UPDATED Loading State --- */}
+            {isLoading && (
+                <div className="text-center py-10">
+                    <div className="animate-spin rounded-full h-14 w-14 border-t-2 border-b-2 border-white mx-auto"></div>
+                    <p className="mt-6 text-lg text-gray-100 [text-shadow:1px_1px_2px_rgba(0,0,0,0.6)]">
+                        Analyzing your report, this may take a minute...
+                    </p>
+                </div>
+            )}
+
+            {/* Error Display - Card style is good */}
+            {error && (
+                <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                    <p className="font-bold">Error</p>
+                    <p>{error}</p>
+                </div>
+            )}
+
+            {/* Render results section */}
             {!isLoading && result && renderResult()}
-            {/* ... Render Grocery List Section ... */}
+
+            {/* Render Grocery List Section - Card style is good */}
             {!isLoading && renderGroceryList()}
         </div>
     );
